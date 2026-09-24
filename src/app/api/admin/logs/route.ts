@@ -5,7 +5,7 @@ import type { LogEntry } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
 
-const ACTIONS = new Set(["add", "delete", "edit", "price_change", "bulk", "group", "settings", "photo"]);
+const ACTIONS = new Set(["add", "delete", "edit", "price_change", "bulk", "group", "settings", "photo", "security"]);
 
 // Change history, newest first. ?action=price_change narrows it (e.g. pricing history only).
 export const GET = handle(async (req: Request) => {

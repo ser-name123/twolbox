@@ -2,12 +2,12 @@
 
 import Image from "next/image";
 import { useCallback, useEffect, useState } from "react";
-import { api } from "@/lib/client/api";
+import { api, ApiError } from "@/lib/client/api";
 import { PrintProvider } from "@/lib/client/print";
 import type { Role } from "@/lib/types";
 import AdminPanel from "./admin/AdminPanel";
 import CustomerView from "./customer/CustomerView";
-import PasswordModal from "./modals/PasswordModal";
+import PasswordModal, { type LoginError } from "./modals/PasswordModal";
 
 export default function ToolboxApp() {
   return (
@@ -29,13 +29,14 @@ function Shell() {
       .catch(() => {});
   }, []);
 
-  const login = async (password: string, requireManager = false) => {
+  const login = async (password: string, requireManager = false): Promise<LoginError | null> => {
     try {
       const r = await api<{ role: Role }>("/api/auth/login", { body: { password, requireManager } });
       setRole(r.role);
       return null;
     } catch (e) {
-      return (e as Error).message;
+      const warning = e instanceof ApiError && typeof e.data.warning === "string" ? e.data.warning : undefined;
+      return { error: (e as Error).message, warning };
     }
   };
 

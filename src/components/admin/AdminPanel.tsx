@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { AdminDataProvider } from "@/lib/client/admin";
 import type { Role } from "@/lib/types";
-import PasswordModal from "../modals/PasswordModal";
+import PasswordModal, { type LoginError } from "../modals/PasswordModal";
 import ProductsTab from "./ProductsTab";
 import QuotesTab from "./QuotesTab";
 
@@ -12,7 +12,7 @@ type Props = {
   onBack: () => void;
   onLogout: () => void;
   onUnauthorized: () => void;
-  upgrade: (password: string) => Promise<string | null>;
+  upgrade: (password: string) => Promise<LoginError | null>;
 };
 
 // Staff: Quotes only. Manager: Quotes + Products (catalog, pricing, analytics, settings).

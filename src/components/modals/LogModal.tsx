@@ -14,9 +14,10 @@ const FILTERS: { id: string; label: string }[] = [
   { id: "bulk", label: "Bulk" },
   { id: "group", label: "Groups" },
   { id: "settings", label: "Settings" },
+  { id: "security", label: "Security" },
 ];
 
-const ACTOR_LABEL: Record<string, string> = { manager: "Manager", staff: "Staff", customer: "Auto (customer quote)", system: "System" };
+const ACTOR_LABEL: Record<string, string> = { manager: "Manager", staff: "Staff", customer: "Auto (customer quote)", system: "System", unknown: "⚠ Unknown person" };
 
 // Change history: what changed, when, and by whom. The "Pricing" filter is the price history.
 export default function LogModal({ open, onClose }: { open: boolean; onClose: () => void }) {

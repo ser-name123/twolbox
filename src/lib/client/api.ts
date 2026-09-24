@@ -3,7 +3,8 @@
 export class ApiError extends Error {
   constructor(
     public status: number,
-    message: string
+    message: string,
+    public data: Record<string, unknown> = {}
   ) {
     super(message);
   }
@@ -22,7 +23,7 @@ export async function api<T>(path: string, opts: { method?: string; body?: unkno
     throw new ApiError(0, "No internet connection. Please try again.");
   }
   const data = await res.json().catch(() => ({}));
-  if (!res.ok) throw new ApiError(res.status, data.error || "Something went wrong. Please try again.");
+  if (!res.ok) throw new ApiError(res.status, data.error || "Something went wrong. Please try again.", data);
   return data as T;
 }
 
