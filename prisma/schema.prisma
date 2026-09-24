@@ -1,0 +1,86 @@
+// Twolbox data model. Connection URLs live in prisma.config.ts (Prisma 7):
+// the app uses the pooled DATABASE_URL, migrations use DIRECT_URL (Supabase's pooler can't run migrations).
+
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/client"
+  runtime  = "nodejs"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model Group {
+  id        String    @id @default(cuid())
+  name      String    @unique
+  hsn       String    @default("")
+  createdAt DateTime  @default(now())
+  products  Product[]
+}
+
+model Product {
+  // Serial number shown to customers (1001, 1002, ...). A deleted code becomes free for reuse.
+  code         Int      @id
+  name         String
+  price        Decimal  @db.Decimal(10, 2) // GST-inclusive
+  hsn          String   @default("")
+  narration    String   @default("")
+  askAtCounter Boolean  @default(false)
+  adminNote    String   @default("") // manager-only, never sent to customers
+  photoUrl     String?
+  // Old-stock pricing: { remainingQty, nextMode: "price"|"counter", newPrice, newPriceQty } — see lib/pricing.ts
+  priceTransition Json?
+  groupId      String?
+  group        Group?   @relation(fields: [groupId], references: [id], onDelete: SetNull)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+}
+
+model Quote {
+  id              String   @id @default(cuid())
+  number          Int // restarts at 1 every day (store timezone)
+  dateKey         String // YYYY-MM-DD in store timezone
+  customerName    String   @default("")
+  items           Json // QuoteItem[] snapshot at finalize time
+  total           Decimal  @db.Decimal(12, 2)
+  hasCounterItems Boolean  @default(false)
+  // Hidden from the staff list (cleared/deleted) but kept for analytics.
+  archived        Boolean  @default(false)
+  createdAt       DateTime @default(now())
+
+  @@unique([dateKey, number])
+  @@index([createdAt])
+}
+
+// One row per day; incremented atomically so concurrent finalizes never share a quote number.
+model DailyCounter {
+  dateKey String @id
+  last    Int    @default(0)
+}
+
+model ChangeLog {
+  id      String   @id @default(cuid())
+  ts      DateTime @default(now())
+  action  String // add | delete | edit | price_change | bulk | group | settings | photo
+  details String
+  actor   String   @default("system") // manager | staff | customer | system
+
+  @@index([ts])
+}
+
+// Customer activity for analytics: visit | add | remove
+model Event {
+  id   BigInt   @id @default(autoincrement())
+  ts   DateTime @default(now())
+  type String
+  code Int?
+
+  @@index([ts])
+  @@index([type, ts])
+}
+
+model Setting {
+  key   String @id
+  value Json
+}

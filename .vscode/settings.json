@@ -1,0 +1,12 @@
+{
+  // This project lives on an exFAT drive: folders that VS Code is watching can't be deleted/recreated,
+  // which breaks `prisma generate` and Next.js builds. Generated and build output is never edited by hand.
+  "files.watcherExclude": {
+    "**/src/generated/**": true,
+    "**/.next/**": true,
+    "**/node_modules/**": true
+  },
+  "search.exclude": {
+    "**/src/generated/**": true
+  }
+}
