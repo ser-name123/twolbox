@@ -1,6 +1,7 @@
 import { QUOTE_VALID_MS } from "@/lib/config";
 import type { Quote } from "@/lib/types";
 import { formatBreakdownText, formatINR } from "@/lib/utils";
+import DeviceStrip from "../customer/DeviceStrip";
 import Modal from "./Modal";
 
 export default function QuoteResultModal({ quote, onClose }: { quote: Quote | null; onClose: () => void }) {
@@ -16,7 +17,10 @@ export default function QuoteResultModal({ quote, onClose }: { quote: Quote | nu
       <div>
         {quote.items.map((i) => (
           <div className="qsummary-row" key={i.code}>
-            <span>{i.name} x{i.qty}</span>
+            <span>
+              {i.name} x{i.qty}
+              {i.discount && <div className="qsummary-discount">✓ {i.discount}</div>}
+            </span>
             <span>{i.askAtCounter ? "Ask at counter" : formatBreakdownText(i.parts)}</span>
           </div>
         ))}
@@ -33,6 +37,7 @@ export default function QuoteResultModal({ quote, onClose }: { quote: Quote | nu
       <p style={{ fontSize: 12, color: "var(--muted)", marginTop: 12 }}>
         Show this number at the delivery counter. Final pricing &amp; stock availability will be confirmed there.
       </p>
+      {quote.ip && <DeviceStrip visitor={quote} compact />}
       <button className="btn-primary" style={{ width: "100%", marginTop: 10 }} onClick={onClose}>
         Start New Quote
       </button>

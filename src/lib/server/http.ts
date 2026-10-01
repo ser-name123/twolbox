@@ -9,11 +9,26 @@ export class HttpError extends Error {
   }
 }
 
+// Couldn't reach the database at all (pooler connect/auth timeout, reset) — nothing ran, safe to retry.
+function isConnectionError(e: unknown): boolean {
+  const s = String((e as { message?: string })?.message ?? e) + String((e as { code?: string })?.code ?? "");
+  return /EAUTHTIMEOUT|ECONNRESET|ETIMEDOUT|ECONNREFUSED|Connection terminated|timeout exceeded when trying to connect|08006|08001|P1001|P1017/.test(s);
+}
+
 // Wraps a route handler: HttpError → JSON error with its status; anything else → 500 (logged).
+// Read requests (GET) are retried once if the database connection itself failed.
 export function handle<A extends unknown[]>(fn: (...args: A) => Promise<Response>) {
   return async (...args: A): Promise<Response> => {
+    const req = args[0] instanceof Request ? args[0] : null;
+    const canRetry = !req || req.method === "GET"; // never re-run writes
     try {
-      return await fn(...args);
+      try {
+        return await fn(...args);
+      } catch (e) {
+        if (!canRetry || !isConnectionError(e)) throw e;
+        console.warn("DB connection failed, retrying once:", (e as Error).message);
+        return await fn(...args);
+      }
     } catch (e) {
       if (e instanceof HttpError) return Response.json({ error: e.message }, { status: e.status });
       console.error(e);

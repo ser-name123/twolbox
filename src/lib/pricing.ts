@@ -1,15 +1,56 @@
-import type { Group, PricePart, Product } from "./types";
+import type { Group, GroupSlab, PricePart, Product, QtySlab } from "./types";
 import { formatINR, groupName } from "./utils";
 
-export type Breakdown = { parts: PricePart[]; lineTotal: number; hasCounterPortion: boolean };
+export type Breakdown = { parts: PricePart[]; lineTotal: number; hasCounterPortion: boolean; discount: string | null };
 
-// Splits a requested quantity across whichever price stages it crosses, without changing stored data —
-// used for live display while the customer is still browsing.
-export function computeBreakdown(prod: Product, qty: number): Breakdown {
-  if (qty <= 0) return { parts: [], lineTotal: 0, hasCounterPortion: false };
-  if (prod.askAtCounter) return { parts: [{ qty, price: null }], lineTotal: 0, hasCounterPortion: true };
+/* ---------------- QUANTITY DISCOUNT ----------------
+   A product's own slabs ("buy 10+ → ₹42 each") win. Otherwise the group's slabs ("buy 10+ → 5% off")
+   apply, unless the product opts out. If several slabs qualify, the highest one applies to ALL units. */
+
+export type DiscountRules = { source: "product"; slabs: QtySlab[] } | { source: "group"; slabs: GroupSlab[] };
+
+export function discountRules(prod: Product, groupSlabs?: GroupSlab[] | null): DiscountRules | null {
+  if (prod.qtyDiscount?.length) return { source: "product", slabs: [...prod.qtyDiscount].sort((a, b) => a.minQty - b.minQty) };
+  if (!prod.ignoreGroupDiscount && groupSlabs?.length) return { source: "group", slabs: [...groupSlabs].sort((a, b) => a.minQty - b.minQty) };
+  return null;
+}
+
+export function slabLabel(s: QtySlab | GroupSlab): string {
+  return "price" in s ? `${s.minQty}+ → ${formatINR(s.price)} each` : `${s.minQty}+ → ${s.percent}% off`;
+}
+
+const round2 = (n: number) => Math.round(n * 100) / 100;
+
+function applyDiscount(parts: PricePart[], qty: number, rules: DiscountRules | null): { parts: PricePart[]; discount: string | null } {
+  const slab = rules ? [...rules.slabs].reverse().find((s) => qty >= s.minQty) : undefined;
+  if (!rules || !slab) return { parts, discount: null };
+  const discounted = parts.map((p) =>
+    p.price === null ? p : { qty: p.qty, price: "price" in slab ? slab.price : round2(p.price * (1 - (slab as GroupSlab).percent / 100)) }
+  );
+  // Stages that now share a price collapse into one line (8 × ₹42 + 2 × ₹42 → 10 × ₹42).
+  const merged: PricePart[] = [];
+  for (const p of discounted) {
+    const last = merged[merged.length - 1];
+    if (last && last.price === p.price) last.qty += p.qty;
+    else merged.push({ ...p });
+  }
+  return { parts: merged, discount: `Qty discount ${slabLabel(slab)}` };
+}
+
+// Splits a requested quantity across whichever price stages it crosses, then applies any quantity
+// discount — without changing stored data. Used for the live cart AND at finalize (server), so both agree.
+export function computeBreakdown(prod: Product, qty: number, groupSlabs?: GroupSlab[] | null): Breakdown {
+  if (qty <= 0) return { parts: [], lineTotal: 0, hasCounterPortion: false, discount: null };
+  if (prod.askAtCounter) return { parts: [{ qty, price: null }], lineTotal: 0, hasCounterPortion: true, discount: null };
+  const { parts, discount } = applyDiscount(stageParts(prod, qty), qty, discountRules(prod, groupSlabs));
+  const lineTotal = round2(parts.reduce((s, p) => s + (p.price === null ? 0 : p.qty * p.price), 0));
+  return { parts, lineTotal, hasCounterPortion: parts.some((p) => p.price === null), discount };
+}
+
+// Old-stock stages only (no discount).
+function stageParts(prod: Product, qty: number): PricePart[] {
   const t = prod.priceTransition;
-  if (!t) return { parts: [{ qty, price: prod.price }], lineTotal: prod.price * qty, hasCounterPortion: false };
+  if (!t) return [{ qty, price: prod.price }];
 
   let remaining = qty;
   const parts: PricePart[] = [];
@@ -33,8 +74,7 @@ export function computeBreakdown(prod: Product, qty: number): Breakdown {
       parts.push({ qty: remaining, price: t.newPrice });
     }
   }
-  const lineTotal = parts.reduce((s, p) => s + (p.price === null ? 0 : p.qty * p.price), 0);
-  return { parts, lineTotal, hasCounterPortion: parts.some((p) => p.price === null) };
+  return parts;
 }
 
 // Called at Finalize time with the FINAL quantity ordered: consumes units from whichever price stage(s)

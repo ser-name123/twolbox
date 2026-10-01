@@ -1,7 +1,7 @@
 "use client";
 
 import { createContext, useCallback, useContext, useEffect, useState, type ReactNode } from "react";
-import type { AdminData, PriceTransition, Product } from "@/lib/types";
+import type { AdminData, GroupSlab, PriceTransition, Product, QtySlab } from "@/lib/types";
 import { api, resizeImage } from "./api";
 
 type Actions = {
@@ -15,6 +15,9 @@ type Actions = {
   removePhoto: (code: string) => Promise<void>;
   setTransition: (code: string, t: PriceTransition | null) => Promise<void>;
   setAllCounter: (value: boolean) => Promise<void>;
+  setProductDiscount: (code: string, slabs: QtySlab[], ignoreGroupDiscount: boolean) => Promise<void>;
+  setGroupDiscount: (id: string, slabs: GroupSlab[]) => Promise<void>;
+  adjustGroupPrices: (id: string, percent: number, direction: "increase" | "decrease") => Promise<number | null>;
   setOrdering: (enabled: boolean) => Promise<void>;
   addGroup: (name: string, hsn: string) => Promise<string | null>;
   updateGroup: (id: string, patch: { name?: string; hsn?: string }) => Promise<void>;
@@ -102,6 +105,16 @@ export function AdminDataProvider({ children, onUnauthorized }: { children: Reac
     setAllCounter: async (value) => {
       if (!confirm(value ? "Mark ALL products as Ask at Counter?" : "Set ALL products back to fixed price?")) return;
       await run(() => api("/api/admin/products/ask-at-counter", { body: { value } }));
+    },
+    setProductDiscount: async (code, slabs, ignoreGroupDiscount) => {
+      await run(() => api(`/api/admin/products/${code}/discount`, { method: "PUT", body: { slabs, ignoreGroupDiscount } }));
+    },
+    setGroupDiscount: async (id, slabs) => {
+      await run(() => api(`/api/admin/groups/${id}/discount`, { method: "PUT", body: { slabs } }));
+    },
+    adjustGroupPrices: async (id, percent, direction) => {
+      const r = await run(() => api<{ updated: number }>(`/api/admin/groups/${id}/adjust-price`, { body: { percent, direction } }));
+      return r?.updated ?? null;
     },
     setOrdering: async (orderingEnabled) => {
       await run(() => api("/api/admin/settings", { method: "PATCH", body: { orderingEnabled } }));

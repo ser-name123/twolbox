@@ -1,22 +1,26 @@
-import { computeBreakdown } from "@/lib/pricing";
-import type { Product } from "@/lib/types";
+import { computeBreakdown, discountRules, slabLabel } from "@/lib/pricing";
+import type { GroupSlab, Product, QtySlab } from "@/lib/types";
 import { formatBreakdownText, formatINR } from "@/lib/utils";
 
 type Props = {
   product: Product;
+  groupSlabs?: GroupSlab[] | null;
   qty: number;
   onQty: (qty: number) => void;
   onRemove: () => void;
   onPhoto: () => void;
 };
 
-export default function CartItem({ product: prod, qty, onQty, onRemove, onPhoto }: Props) {
-  const bd = computeBreakdown(prod, qty);
+export default function CartItem({ product: prod, groupSlabs, qty, onQty, onRemove, onPhoto }: Props) {
+  const bd = computeBreakdown(prod, qty, groupSlabs);
+  const rules = prod.askAtCounter ? null : discountRules(prod, groupSlabs);
+  // Next slab the customer hasn't reached yet — "add 3 more to get ₹42.00 each".
+  const next = rules?.slabs.find((s) => s.minQty > qty);
   const isFullyCounter = prod.askAtCounter;
   const priceLabel = isFullyCounter ? "Price: Ask at Counter" : formatINR(prod.price) + " / unit";
 
   let splitNote = null;
-  if (!isFullyCounter && prod.priceTransition) {
+  if (!isFullyCounter && prod.priceTransition && !bd.discount) {
     const t = prod.priceTransition;
     if (bd.parts.length > 1) {
       // the quantity crosses into a later price stage — show the exact breakdown
@@ -59,6 +63,22 @@ export default function CartItem({ product: prod, qty, onQty, onRemove, onPhoto 
         {prod.narration && <div className="ci-narration">{prod.narration}</div>}
         <div className={"ci-price" + (isFullyCounter ? " counter-tag" : "")}>{priceLabel}</div>
         {splitNote}
+        {rules && (
+          <div className="ci-discount">
+            Buy more and save: {(rules.slabs as (QtySlab | GroupSlab)[]).map(slabLabel).join(" · ")}
+          </div>
+        )}
+        {bd.discount && (
+          <div className="ci-discount applied">
+            ✓ {bd.discount.replace("Qty discount", "Quantity discount applied:")}
+            {bd.parts.length > 1 ? ` (${formatBreakdownText(bd.parts)})` : ""}
+          </div>
+        )}
+        {next && qty > 0 && (
+          <div className="ci-discount">
+            Add {next.minQty - qty} more to get {"price" in next ? `${formatINR(next.price)} each` : `${next.percent}% off`}
+          </div>
+        )}
         <div className="ci-linetotal">{lineDisplay}</div>
       </div>
       <div className="ci-controls">

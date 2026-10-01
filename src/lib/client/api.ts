@@ -37,6 +37,17 @@ export function track(type: "visit" | "add" | "remove", code?: string) {
   }).catch(() => {});
 }
 
+// Phone model from the browser's client hints (Chrome/Edge on Android give e.g. "SM-A525F").
+// Other browsers don't share it; the server falls back to the user agent.
+export async function deviceModel(): Promise<string> {
+  try {
+    const uad = (navigator as Navigator & { userAgentData?: { getHighEntropyValues(h: string[]): Promise<{ model?: string }> } }).userAgentData;
+    return (await uad?.getHighEntropyValues(["model"]))?.model ?? "";
+  } catch {
+    return "";
+  }
+}
+
 // Shrinks a photo in the browser before upload (max 1200px, JPEG) — keeps uploads small and fast.
 export async function resizeImage(file: File, maxSide = 1200, quality = 0.85): Promise<File> {
   if (!file.type.startsWith("image/")) throw new Error("Please choose an image file.");

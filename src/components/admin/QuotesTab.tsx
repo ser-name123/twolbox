@@ -92,6 +92,11 @@ export default function QuotesTab({ onUnauthorized }: { onUnauthorized: () => vo
                     {created.toLocaleDateString("en-IN")} · {created.toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit" })}
                   </div>
                   {quote.customerName && <div className="qc-name">{quote.customerName}</div>}
+                  {quote.device && (
+                    <div className="qc-meta" title={`IP ${quote.ip}`}>
+                      📱 {quote.device} · {quote.location !== "unknown location" ? quote.location : `IP ${quote.ip}`}
+                    </div>
+                  )}
                 </div>
                 <span className={valid ? "status-valid" : "status-expired"} style={{ fontSize: 11.5 }}>
                   {valid ? "VALID" : "EXPIRED"}
@@ -100,7 +105,10 @@ export default function QuotesTab({ onUnauthorized }: { onUnauthorized: () => vo
               <div className="qc-items">
                 {quote.items.map((i) => (
                   <div className="qc-item-row" key={i.code}>
-                    <span>{i.code} · {i.name} x{i.qty}</span>
+                    <span>
+                      {i.code} · {i.name} x{i.qty}
+                      {i.discount && <span className="qc-discount"> · {i.discount}</span>}
+                    </span>
                     <span>{i.askAtCounter ? "Counter" : i.hasCounterPortion ? formatBreakdownText(i.parts) : formatINR(i.lineTotal)}</span>
                   </div>
                 ))}

@@ -41,7 +41,7 @@ export function quoteText(q: Quote): string {
     `${new Date(q.createdAt).toLocaleString("en-IN", { dateStyle: "medium", timeStyle: "short" })}${q.customerName ? ` · ${q.customerName}` : ""}`,
     "",
     ...q.items.map(
-      (i) => `${i.code} · ${i.name} × ${i.qty} — ${i.askAtCounter ? "Ask at counter" : i.hasCounterPortion ? formatBreakdownText(i.parts) : `${formatBreakdownText(i.parts)} = ${formatINR(i.lineTotal)}`}`
+      (i) => `${i.code} · ${i.name} × ${i.qty} — ${i.askAtCounter ? "Ask at counter" : i.hasCounterPortion ? formatBreakdownText(i.parts) : `${formatBreakdownText(i.parts)} = ${formatINR(i.lineTotal)}`}${i.discount ? ` (${i.discount})` : ""}`
     ),
     "",
     `*Total: ${formatINR(q.total)}${q.hasCounterItems ? " + counter items" : ""}* (incl. GST)`,

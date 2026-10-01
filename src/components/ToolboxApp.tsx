@@ -97,6 +97,9 @@ function Shell() {
           return err;
         }}
       />
+
+      {/* Which commit is live (set at build time in next.config.ts). */}
+      <div className="commit-id" title="Deployed version (git commit)">v {process.env.APP_COMMIT_ID}</div>
     </>
   );
 }

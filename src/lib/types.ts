@@ -1,6 +1,11 @@
 export type Role = "staff" | "manager";
 
-export type Group = { id: string; name: string; hsn: string };
+// Quantity discount slabs. Product: buy minQty or more → exact price per unit.
+// Group: buy minQty or more → percent off each product's price.
+export type QtySlab = { minQty: number; price: number };
+export type GroupSlab = { minQty: number; percent: number };
+
+export type Group = { id: string; name: string; hsn: string; qtyDiscount: GroupSlab[] | null };
 
 // Old stock about to run out at the current price.
 // remainingQty: units left at the CURRENT price (product.price)
@@ -25,6 +30,8 @@ export type Product = {
   adminNote: string; // always "" for customers
   photoUrl: string | null;
   priceTransition: PriceTransition | null;
+  qtyDiscount: QtySlab[] | null;
+  ignoreGroupDiscount: boolean;
 };
 
 // price === null means that part is priced at the counter
@@ -38,6 +45,7 @@ export type QuoteItem = {
   lineTotal: number;
   hasCounterPortion: boolean;
   askAtCounter: boolean;
+  discount?: string | null; // e.g. "Qty discount 10+ → ₹42.00 each"
 };
 
 export type Quote = {
@@ -49,7 +57,13 @@ export type Quote = {
   items: QuoteItem[];
   total: number;
   hasCounterItems: boolean;
+  // Who finalized it (device + network), shown to customer and staff.
+  ip: string;
+  location: string;
+  device: string;
 };
+
+export type Visitor = { ip: string; location: string; device: string };
 
 export type LogEntry = { id: string; ts: number; action: string; details: string; actor: string };
 
@@ -59,7 +73,8 @@ export type Settings = { orderingEnabled: boolean };
 
 export type CartLine = { code: string; qty: number };
 
-export type Catalog = { products: Product[]; orderingEnabled: boolean };
+// groupDiscounts: groupId → slabs, so the browser can price group discounts exactly like the server.
+export type Catalog = { products: Product[]; orderingEnabled: boolean; groupDiscounts: Record<string, GroupSlab[]> };
 
 export type AdminData = {
   products: Product[];

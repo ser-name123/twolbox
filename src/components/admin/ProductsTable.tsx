@@ -10,6 +10,7 @@ type Handlers = {
   onPhotoView: (code: string) => void;
   onPhotoRemove: (code: string) => void;
   onTiers: (code: string) => void;
+  onDiscount: (code: string) => void;
 };
 
 const miniBtn = { padding: "5px 8px", fontSize: 11 } as const;
@@ -32,6 +33,7 @@ export default function ProductsTable({ products, groups, ...h }: { products: Pr
             <th style={{ minWidth: 160 }}>Private Note (you only)</th>
             <th style={{ width: 110 }}>Photo</th>
             <th style={{ width: 130 }}>Price Update</th>
+            <th style={{ width: 100 }}>Qty Discount</th>
             <th style={{ width: 34 }}></th>
           </tr>
         </thead>
@@ -41,7 +43,7 @@ export default function ProductsTable({ products, groups, ...h }: { products: Pr
           ))}
           {!products.length && (
             <tr>
-              <td colSpan={11} className="ro empty-text">No products found.</td>
+              <td colSpan={12} className="ro empty-text">No products found.</td>
             </tr>
           )}
         </tbody>
@@ -50,7 +52,9 @@ export default function ProductsTable({ products, groups, ...h }: { products: Pr
   );
 }
 
-function Row({ p, groups, onUpdate, onDelete, onPhotoUpload, onPhotoView, onPhotoRemove, onTiers }: { p: Product; groups: Group[] } & Handlers) {
+function Row({ p, groups, onUpdate, onDelete, onPhotoUpload, onPhotoView, onPhotoRemove, onTiers, onDiscount }: { p: Product; groups: Group[] } & Handlers) {
+  const own = p.qtyDiscount?.length ?? 0;
+  const groupHas = !own && !p.ignoreGroupDiscount && !!groups.find((g) => g.id === p.groupId)?.qtyDiscount?.length;
   const fileRef = useRef<HTMLInputElement>(null);
   const text = (field: "name" | "hsn" | "narration" | "adminNote") => ({
 
@@ -118,6 +122,11 @@ function Row({ p, groups, onUpdate, onDelete, onPhotoUpload, onPhotoView, onPhot
       <td style={{ padding: 4 }}>
         <button className={"small-btn " + (p.priceTransition ? "orange" : "grey")} style={miniBtn} onClick={() => onTiers(p.code)}>
           {p.priceTransition ? `Change pending (${p.priceTransition.remainingQty} left)` : "Flat Price"}
+        </button>
+      </td>
+      <td style={{ padding: 4 }}>
+        <button className={"small-btn " + (own ? "orange" : "grey")} style={miniBtn} onClick={() => onDiscount(p.code)}>
+          {own ? `Own (${own})` : groupHas ? "Group" : "None"}
         </button>
       </td>
       <td className="del-cell">

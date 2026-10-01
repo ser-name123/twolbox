@@ -1,6 +1,6 @@
 import "server-only";
 import type { Group as DbGroup, Product as DbProduct, Quote as DbQuote } from "@/generated/client/client";
-import type { Group, PriceTransition, Product, Quote, QuoteItem } from "@/lib/types";
+import type { Group, GroupSlab, PriceTransition, Product, QtySlab, Quote, QuoteItem } from "@/lib/types";
 
 export function toProduct(p: DbProduct): Product {
   return {
@@ -14,6 +14,8 @@ export function toProduct(p: DbProduct): Product {
     adminNote: p.adminNote,
     photoUrl: p.photoUrl,
     priceTransition: (p.priceTransition as PriceTransition | null) ?? null,
+    qtyDiscount: (p.qtyDiscount as QtySlab[] | null) ?? null,
+    ignoreGroupDiscount: p.ignoreGroupDiscount,
   };
 }
 
@@ -23,7 +25,7 @@ export function toPublicProduct(p: DbProduct): Product {
 }
 
 export function toGroup(g: DbGroup): Group {
-  return { id: g.id, name: g.name, hsn: g.hsn };
+  return { id: g.id, name: g.name, hsn: g.hsn, qtyDiscount: (g.qtyDiscount as GroupSlab[] | null) ?? null };
 }
 
 export function toQuote(q: DbQuote): Quote {
@@ -36,5 +38,8 @@ export function toQuote(q: DbQuote): Quote {
     items: q.items as QuoteItem[],
     total: Number(q.total),
     hasCounterItems: q.hasCounterItems,
+    ip: q.ip,
+    location: q.location,
+    device: q.device,
   };
 }

@@ -7,6 +7,7 @@ import { catalogHtml } from "@/lib/printTemplates";
 import { groupName, naturalCompare } from "@/lib/utils";
 import LogModal from "../modals/LogModal";
 import PhotoModal, { type PhotoView } from "../modals/PhotoModal";
+import QtyDiscountModal from "../modals/QtyDiscountModal";
 import TiersModal from "../modals/TiersModal";
 import AnalyticsView from "./AnalyticsView";
 import GroupView from "./GroupView";
@@ -23,6 +24,7 @@ export default function ProductsTab() {
   const [logOpen, setLogOpen] = useState(false);
   const [photo, setPhoto] = useState<PhotoView>(null);
   const [tiersCode, setTiersCode] = useState<string | null>(null);
+  const [discountCode, setDiscountCode] = useState<string | null>(null);
 
   const { data } = admin;
   if (!data) {
@@ -54,9 +56,11 @@ export default function ProductsTab() {
     },
     onPhotoRemove: admin.removePhoto,
     onTiers: setTiersCode,
+    onDiscount: setDiscountCode,
   };
 
   const tiersProduct = tiersCode ? (products.find((p) => p.code === tiersCode) ?? null) : null;
+  const discountProduct = discountCode ? (products.find((p) => p.code === discountCode) ?? null) : null;
 
   return (
     <div id="productsTab">
@@ -134,6 +138,27 @@ export default function ProductsTab() {
 
       <LogModal open={logOpen} onClose={() => setLogOpen(false)} />
       <PhotoModal photo={photo} onClose={() => setPhoto(null)} />
+      {discountProduct && (
+        <QtyDiscountModal
+          key={discountProduct.code}
+          title={`Quantity discount — ${discountProduct.name} (Code ${discountProduct.code})`}
+          mode="price"
+          initial={(discountProduct.qtyDiscount ?? []).map((s) => ({ minQty: s.minQty, value: s.price }))}
+          ignoreGroup={{
+            value: discountProduct.ignoreGroupDiscount,
+            groupName: groups.find((g) => g.id === discountProduct.groupId)?.name ?? null,
+          }}
+          onClose={() => setDiscountCode(null)}
+          onSave={async (slabs, ignore) => {
+            await admin.setProductDiscount(discountProduct.code, slabs.map((s) => ({ minQty: s.minQty, price: s.value })), ignore);
+            setDiscountCode(null);
+          }}
+          onRemove={async () => {
+            await admin.setProductDiscount(discountProduct.code, [], false);
+            setDiscountCode(null);
+          }}
+        />
+      )}
       <TiersModal
         key={tiersCode ?? "none"}
         product={tiersProduct}
