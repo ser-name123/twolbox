@@ -3,12 +3,11 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { api, deviceModel, track } from "@/lib/client/api";
 import { computeBreakdown } from "@/lib/pricing";
-import type { CartLine, Catalog, Product, Quote, Visitor } from "@/lib/types";
+import type { CartLine, Catalog, Product, Quote } from "@/lib/types";
 import { findProduct, formatINR } from "@/lib/utils";
 import PhotoModal, { type PhotoView } from "../modals/PhotoModal";
 import QuoteResultModal from "../modals/QuoteResultModal";
 import CartItem from "./CartItem";
-import DeviceStrip from "./DeviceStrip";
 
 const CATALOG_REFRESH_MS = 60000; // pick up price/stock changes while the page stays open
 
@@ -22,7 +21,6 @@ export default function CustomerView() {
   const [resultQuote, setResultQuote] = useState<Quote | null>(null);
   const [photo, setPhoto] = useState<PhotoView>(null);
   const [busy, setBusy] = useState(false);
-  const [visitor, setVisitor] = useState<Visitor | null>(null);
   const [model, setModel] = useState("");
   const codeInputRef = useRef<HTMLInputElement>(null);
 
@@ -52,21 +50,9 @@ export default function CustomerView() {
     track("visit");
   }, []);
 
-  // The device / IP / location every quote from this phone is logged with — shown up front so it deters spam.
+  // Phone model, sent with the quote so it's recorded with the device (shown on the quote number popup).
   useEffect(() => {
-    let cancelled = false;
-    deviceModel().then(async (model) => {
-      setModel(model);
-      try {
-        const v = await api<Visitor>(`/api/whoami${model ? `?model=${encodeURIComponent(model)}` : ""}`);
-        if (!cancelled) setVisitor(v);
-      } catch {
-        /* the strip is informational; quotes still work */
-      }
-    });
-    return () => {
-      cancelled = true;
-    };
+    deviceModel().then(setModel);
   }, []);
 
   const products: Product[] = catalog?.products ?? [];
@@ -145,7 +131,6 @@ export default function CustomerView() {
           </div>
         ) : (
           <div>
-            {visitor && <DeviceStrip visitor={visitor} />}
             <div className="name-box">
               <span className="lbl">Your name (optional)</span>
               <input placeholder="e.g. Rajesh" autoComplete="off" maxLength={80} value={customerName} onChange={(e) => setCustomerName(e.target.value)} />

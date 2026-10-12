@@ -1,7 +1,7 @@
 import type { Visitor } from "@/lib/types";
 
-// What this phone is identified as (device, IP, location). Shown on the main page and on the quote
-// number, so customers know quotes are traceable — discourages spam with random codes.
+// What this phone is identified as (device, IP, location). Shown on the quote number popup after
+// finalizing, so customers know quotes are traceable — discourages spam with random codes.
 export default function DeviceStrip({ visitor, compact }: { visitor: Visitor; compact?: boolean }) {
   const parts = [visitor.device, `IP ${visitor.ip}`, visitor.location !== "unknown location" ? visitor.location : null].filter(Boolean);
   return (
