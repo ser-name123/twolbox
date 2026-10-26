@@ -261,3 +261,8 @@ table.xl td.ro{padding:6px 8px;}
 /* Deployed commit ID, bottom-right corner (sits under the cart bar when that's open) */
 .commit-id{position:fixed; right:10px; bottom:8px; z-index:30; font-size:11px; color:var(--muted); font-family:ui-monospace,Consolas,monospace; opacity:0.75; pointer-events:none; user-select:all;}
 @media print{ .commit-id{display:none;} }
+
+/* Product photo thumbnails on staff quote cards (tap to enlarge) */
+.qc-item-main{display:flex; gap:6px; align-items:flex-start;}
+.qc-thumb{width:34px; height:34px; flex-shrink:0; padding:0; border:1px solid var(--border); border-radius:6px; overflow:hidden; background:#fafafa; cursor:pointer;}
+.qc-thumb img{width:100%; height:100%; object-fit:cover; display:block;}

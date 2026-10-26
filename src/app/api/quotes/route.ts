@@ -19,15 +19,23 @@ const SPAM_MAX_QUOTES = 5; // per device…
 const SPAM_WINDOW_MS = 15 * 60 * 1000; // …in 15 minutes
 const SPAM_MAX_PER_IP = 30; // whole network (shop Wi-Fi) in the same window
 
-// Staff: incoming quotes (today and yesterday, newest first), excluding cleared ones.
+// Staff: incoming quotes (today and yesterday, newest first), excluding cleared ones,
+// plus the current photo of each product in them (code → URL) so staff can see what to pick.
 export const GET = handle(async () => {
   await requireRole("staff");
-  const quotes = await prisma.quote.findMany({
-    where: { archived: false, createdAt: { gte: localMidnight(1) } },
-    orderBy: { createdAt: "desc" },
-    take: 500,
-  });
-  return Response.json({ quotes: quotes.map(toQuote) });
+  const quotes = (
+    await prisma.quote.findMany({
+      where: { archived: false, createdAt: { gte: localMidnight(1) } },
+      orderBy: { createdAt: "desc" },
+      take: 500,
+    })
+  ).map(toQuote);
+  const codes = [...new Set(quotes.flatMap((q) => q.items.map((i) => parseInt(i.code, 10))).filter(Number.isInteger))];
+  const withPhoto = codes.length
+    ? await prisma.product.findMany({ where: { code: { in: codes }, photoUrl: { not: null } }, select: { code: true, photoUrl: true } })
+    : [];
+  const photos: Record<string, string> = Object.fromEntries(withPhoto.map((p) => [String(p.code), p.photoUrl!]));
+  return Response.json({ quotes, photos });
 });
 
 // Customer: finalize a quote. Prices are always computed here from the latest product data —

@@ -7,10 +7,13 @@ import { QUOTE_VALID_MS, QUOTES_REFRESH_MS } from "@/lib/config";
 import { downloadQuotePdf, quoteHtml } from "@/lib/printTemplates";
 import type { Quote } from "@/lib/types";
 import { formatBreakdownText, formatINR, quoteText } from "@/lib/utils";
+import PhotoModal, { type PhotoView } from "../modals/PhotoModal";
 
 export default function QuotesTab({ onUnauthorized }: { onUnauthorized: () => void }) {
   const printHtml = usePrint();
   const [quotes, setQuotes] = useState<Quote[] | null>(null);
+  const [photos, setPhotos] = useState<Record<string, string>>({}); // product code → photo URL
+  const [photo, setPhoto] = useState<PhotoView>(null);
   const [error, setError] = useState<string | null>(null);
   const [search, setSearch] = useState("");
   const [now, setNow] = useState(() => Date.now());
@@ -18,8 +21,9 @@ export default function QuotesTab({ onUnauthorized }: { onUnauthorized: () => vo
 
   const load = useCallback(async () => {
     try {
-      const r = await api<{ quotes: Quote[] }>("/api/quotes");
+      const r = await api<{ quotes: Quote[]; photos?: Record<string, string> }>("/api/quotes");
       setQuotes(r.quotes);
+      setPhotos(r.photos ?? {});
       setError(null);
     } catch (e) {
       if (e instanceof ApiError && e.status === 401) onUnauthorized();
@@ -105,9 +109,17 @@ export default function QuotesTab({ onUnauthorized }: { onUnauthorized: () => vo
               <div className="qc-items">
                 {quote.items.map((i) => (
                   <div className="qc-item-row" key={i.code}>
-                    <span>
-                      {i.code} · {i.name} x{i.qty}
-                      {i.discount && <span className="qc-discount"> · {i.discount}</span>}
+                    <span className="qc-item-main">
+                      {photos[i.code] && (
+                        <button className="qc-thumb" onClick={() => setPhoto({ title: `Code ${i.code} — ${i.name}`, src: photos[i.code] })} aria-label={`View photo of ${i.name}`}>
+                          {/* eslint-disable-next-line @next/next/no-img-element -- Blob URL, already resized on upload */}
+                          <img src={photos[i.code]} alt="" loading="lazy" />
+                        </button>
+                      )}
+                      <span>
+                        {i.code} · {i.name} x{i.qty}
+                        {i.discount && <span className="qc-discount"> · {i.discount}</span>}
+                      </span>
                     </span>
                     <span>{i.askAtCounter ? "Counter" : i.hasCounterPortion ? formatBreakdownText(i.parts) : formatINR(i.lineTotal)}</span>
                   </div>
@@ -132,6 +144,7 @@ export default function QuotesTab({ onUnauthorized }: { onUnauthorized: () => vo
           );
         })}
       </div>
+      <PhotoModal photo={photo} onClose={() => setPhoto(null)} />
     </div>
   );
 }
