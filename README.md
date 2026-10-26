@@ -50,7 +50,7 @@ Without `BLOB_READ_WRITE_TOKEN`, local dev stores photos inside the database (fi
 3. **Vercel** → import the Git repo. Environment variables:
    `DATABASE_URL`, `DIRECT_URL`, `STAFF_PASSWORD`, `MANAGER_PASSWORD`, `SESSION_SECRET` (32+ random chars),
    `STORE_TIMEZONE` (`Asia/Kolkata`), `SERIAL_START` (`1001`).
-4. **Vercel → Storage → Blob → Create & connect** to the project (adds `BLOB_READ_WRITE_TOKEN` automatically).
+4. **Vercel → Storage → Blob → Create & connect** to the project — choose **Public** access. Vercel adds either `BLOB_READ_WRITE_TOKEN` or `BLOB_STORE_ID` (newer, uses the deployment's OIDC token); both work. Redeploy afterwards.
    Functions run in `syd1` (see `vercel.json`) to sit next to the Supabase database (ap-southeast-2).
 5. Deploy. Make the QR code point at the site URL.
 
